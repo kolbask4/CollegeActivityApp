@@ -21,8 +21,8 @@ data class Goal(
     val userIin: String,
     val title: String,
     val description: String,
-    val progress: Int, // 0-100
-    val deadline: Long, // timestamp
+    val progress: Int,
+    val deadline: Long,
     val mentorComment: String? = null,
     val isCompleted: Boolean = false
 )

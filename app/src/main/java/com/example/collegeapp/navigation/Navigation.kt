@@ -22,9 +22,13 @@ fun Navigation(
     gradeDao: GradeDao,
     goalDao: GoalDao,
     portfolioDao: PortfolioDao,
-    currentUserIin: String?
+    currentUserIin: String?,
+    onLogout: () -> Unit
 ) {
-    NavHost(navController = navController, startDestination = Screens.Home.route) {
+    NavHost(
+        navController = navController,
+        startDestination = Screens.Home.route
+    ) {
         composable(Screens.Home.route) {
             HomeScreen(userDao = userDao, gradeDao = gradeDao, currentUserIin = currentUserIin)
         }
@@ -35,7 +39,12 @@ fun Navigation(
             PortfolioScreen(userDao = userDao, portfolioDao = portfolioDao, currentUserIin = currentUserIin)
         }
         composable(Screens.Profile.route) {
-            ProfileScreen(userDao = userDao, currentUserIin = currentUserIin, navController = navController)
+            ProfileScreen(
+                userDao = userDao,
+                currentUserIin = currentUserIin,
+                navController = navController,
+                onLogout = onLogout
+            )
         }
     }
 }

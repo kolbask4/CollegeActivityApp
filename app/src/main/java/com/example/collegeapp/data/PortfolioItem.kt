@@ -27,6 +27,6 @@ data class PortfolioItem(
     val description: String,
     val type: PortfolioType,
     val imageUrl: String,
-    val date: Long, // timestamp
+    val date: Long,
     val tags: List<String>
 ) 

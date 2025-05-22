@@ -135,7 +135,12 @@ fun HomeScreen(userDao: UserDao, gradeDao: GradeDao, currentUserIin: String?) {
 }
 
 @Composable
-fun ProfileScreen(userDao: UserDao, currentUserIin: String?, navController: NavHostController) {
+fun ProfileScreen(
+    userDao: UserDao,
+    currentUserIin: String?,
+    navController: NavHostController,
+    onLogout: () -> Unit
+) {
     var userName by remember { mutableStateOf("") }
     var userCourse by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
@@ -217,7 +222,7 @@ fun ProfileScreen(userDao: UserDao, currentUserIin: String?, navController: NavH
 
         item {
             Button(
-                onClick = { exitProcess(0) },
+                onClick = onLogout,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 ),

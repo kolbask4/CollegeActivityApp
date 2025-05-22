@@ -198,7 +198,6 @@ fun PortfolioItemCard(item: PortfolioItem, onClick: () -> Unit) {
         onClick = onClick
     ) {
         Column {
-            // TODO: изображение
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -253,7 +252,6 @@ fun PortfolioItemDialog(item: PortfolioItem, onDismiss: () -> Unit) {
         title = { Text(item.title) },
         text = {
             Column {
-                // TODO: изображение
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

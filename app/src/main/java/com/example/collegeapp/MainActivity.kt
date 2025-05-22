@@ -4,21 +4,29 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.collegeapp.data.AppDatabase
-import com.example.collegeapp.data.UserDao
-import com.example.collegeapp.data.GradeDao
 import com.example.collegeapp.data.GoalDao
+import com.example.collegeapp.data.GradeDao
 import com.example.collegeapp.data.PortfolioDao
+import com.example.collegeapp.data.SessionManager
+import com.example.collegeapp.data.UserDao
 import com.example.collegeapp.navigation.Navigation
 import com.example.collegeapp.navigation.Screens
 import com.example.collegeapp.screens.auth.LoginScreen
@@ -30,6 +38,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var gradeDao: GradeDao
     private lateinit var goalDao: GoalDao
     private lateinit var portfolioDao: PortfolioDao
+    private lateinit var sessionManager: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,20 +47,33 @@ class MainActivity : ComponentActivity() {
         gradeDao = db.gradeDao()
         goalDao = db.goalDao()
         portfolioDao = db.portfolioDao()
+        sessionManager = SessionManager(this)
         enableEdgeToEdge()
         setContent {
             CollegeAppTheme {
-                AuthScreen(userDao = userDao, gradeDao = gradeDao, goalDao = goalDao, portfolioDao = portfolioDao)
+                AuthScreen(
+                    userDao = userDao,
+                    gradeDao = gradeDao,
+                    goalDao = goalDao,
+                    portfolioDao = portfolioDao,
+                    sessionManager = sessionManager
+                )
             }
         }
     }
 }
 
 @Composable
-fun AuthScreen(userDao: UserDao, gradeDao: GradeDao, goalDao: GoalDao, portfolioDao: PortfolioDao) {
-    var isAuthenticated by remember { mutableStateOf(false) }
+fun AuthScreen(
+    userDao: UserDao,
+    gradeDao: GradeDao,
+    goalDao: GoalDao,
+    portfolioDao: PortfolioDao,
+    sessionManager: SessionManager
+) {
+    var isAuthenticated by remember { mutableStateOf(sessionManager.isLoggedIn()) }
     var showRegister by remember { mutableStateOf(false) }
-    var currentUserIin by remember { mutableStateOf<String?>(null) }
+    var currentUserIin by remember { mutableStateOf<String?>(sessionManager.getUserIin()) }
 
     if (!isAuthenticated) {
         if (showRegister) {
@@ -60,6 +82,7 @@ fun AuthScreen(userDao: UserDao, gradeDao: GradeDao, goalDao: GoalDao, portfolio
                     isAuthenticated = true
                     showRegister = false
                     currentUserIin = iin
+                    sessionManager.saveUserSession(iin)
                 },
                 onNavigateToLogin = {
                     showRegister = false
@@ -72,6 +95,7 @@ fun AuthScreen(userDao: UserDao, gradeDao: GradeDao, goalDao: GoalDao, portfolio
                 onLoginSuccess = { iin ->
                     isAuthenticated = true
                     currentUserIin = iin
+                    sessionManager.saveUserSession(iin)
                 },
                 onNavigateToRegister = {
                     showRegister = true
@@ -80,60 +104,127 @@ fun AuthScreen(userDao: UserDao, gradeDao: GradeDao, goalDao: GoalDao, portfolio
             )
         }
     } else {
-        MainScreen(userDao = userDao, gradeDao = gradeDao, goalDao = goalDao, portfolioDao = portfolioDao, currentUserIin = currentUserIin)
+        MainScreen(
+            userDao = userDao,
+            gradeDao = gradeDao,
+            goalDao = goalDao,
+            portfolioDao = portfolioDao,
+            currentUserIin = currentUserIin,
+            onLogout = {
+                isAuthenticated = false
+                currentUserIin = null
+                sessionManager.clearSession()
+            }
+        )
     }
 }
 
 @Composable
-fun MainScreen(userDao: UserDao, gradeDao: GradeDao, goalDao: GoalDao, portfolioDao: PortfolioDao, currentUserIin: String?) {
+fun MainScreen(
+    userDao: UserDao,
+    gradeDao: GradeDao,
+    goalDao: GoalDao,
+    portfolioDao: PortfolioDao,
+    currentUserIin: String?,
+    onLogout: () -> Unit
+) {
     val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val currentBackStack by navController.currentBackStackEntryAsState()
+    val currentDestination = currentBackStack?.destination
+    val currentRoute = currentDestination?.route
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Главная") },
+                    icon = {
+                        Icon(
+                            painterResource(
+                                if (currentRoute == Screens.Home.route) {
+                                    R.drawable.home
+                                } else {
+                                    R.drawable.nfhome
+                                }
+                            ), contentDescription = "Главная"
+                        )
+                    },
                     label = { Text("Главная") },
                     selected = currentRoute == Screens.Home.route,
                     onClick = {
-                        navController.navigate(Screens.Home.route) {
-                            popUpTo(navController.graph.startDestinationId)
-                            launchSingleTop = true
+                        if (currentRoute != Screens.Home.route) {
+                            navController.navigate(Screens.Home.route) {
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
+                            }
                         }
                     }
                 )
                 NavigationBarItem(
-                    icon = { Icon(painterResource(R.drawable.round_folder_24), contentDescription = "План") },
+                    icon = {
+                        Icon(
+                            painterResource(
+                                if (currentRoute == Screens.Plan.route) {
+                                    R.drawable.plan
+                                } else {
+                                    R.drawable.nfplan
+                                }
+                            ), contentDescription = "План"
+                        )
+                    },
                     label = { Text("План") },
-                    selected = currentRoute == Screens.Plan.route,
+                    selected = currentDestination?.route == Screens.Plan.route,
                     onClick = {
-                        navController.navigate(Screens.Plan.route) {
-                            popUpTo(navController.graph.startDestinationId)
-                            launchSingleTop = true
+                        if (currentDestination?.route != Screens.Plan.route) {
+                            navController.navigate(Screens.Plan.route) {
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
+                            }
                         }
                     }
                 )
                 NavigationBarItem(
-                    icon = { Icon(painterResource(R.drawable.round_folder_24), contentDescription = "Портфолио") },
+                    icon = {
+                        Icon(
+                            painterResource(
+                                if (currentRoute == Screens.Portfolio.route) {
+                                    R.drawable.portf
+                                } else {
+                                    R.drawable.nfportf
+                                }
+                            ), contentDescription = "Портфолио"
+                        )
+                    },
                     label = { Text("Портфолио") },
-                    selected = currentRoute == Screens.Portfolio.route,
+                    selected = currentDestination?.route == Screens.Portfolio.route,
                     onClick = {
-                        navController.navigate(Screens.Portfolio.route) {
-                            popUpTo(navController.graph.startDestinationId)
-                            launchSingleTop = true
+                        if (currentDestination?.route != Screens.Portfolio.route) {
+                            navController.navigate(Screens.Portfolio.route) {
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
+                            }
                         }
                     }
                 )
                 NavigationBarItem(
-                    icon = { Icon(painterResource(R.drawable.round_folder_24), contentDescription = "Профиль") },
+                    icon = {
+                        Icon(
+                            painterResource(
+                                if (currentRoute == Screens.Profile.route) {
+                                    R.drawable.profile
+                                } else {
+                                    R.drawable.nfprofile
+                                }
+                            ), contentDescription = "Профиль"
+                        )
+                    },
                     label = { Text("Профиль") },
-                    selected = currentRoute == Screens.Profile.route,
+                    selected = currentDestination?.route == Screens.Profile.route,
                     onClick = {
-                        navController.navigate(Screens.Profile.route) {
-                            popUpTo(navController.graph.startDestinationId)
-                            launchSingleTop = true
+                        if (currentDestination?.route != Screens.Profile.route) {
+                            navController.navigate(Screens.Profile.route) {
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
+                            }
                         }
                     }
                 )
@@ -146,12 +237,12 @@ fun MainScreen(userDao: UserDao, gradeDao: GradeDao, goalDao: GoalDao, portfolio
             gradeDao = gradeDao,
             goalDao = goalDao,
             portfolioDao = portfolioDao,
-            currentUserIin = currentUserIin
+            currentUserIin = currentUserIin,
+            onLogout = onLogout
         )
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun MainScreenPreview() {
     CollegeAppTheme {
@@ -161,7 +252,8 @@ fun MainScreenPreview() {
             gradeDao = db.gradeDao(),
             goalDao = db.goalDao(),
             portfolioDao = db.portfolioDao(),
-            currentUserIin = "123456789012"
+            currentUserIin = "123456789012",
+            onLogout = {}
         )
     }
 }

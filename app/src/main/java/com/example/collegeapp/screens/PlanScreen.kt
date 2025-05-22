@@ -118,6 +118,12 @@ fun PlanScreen(userDao: UserDao, goalDao: GoalDao, currentUserIin: String?) {
                     goalDao.updateGoal(updatedGoal)
                     goals = goalDao.getGoalsByUser(currentUserIin ?: return@launch)
                 }
+            },
+            onDelete = { deletedGoal ->
+                scope.launch {
+                    goalDao.deleteGoal(deletedGoal.id)
+                    goals = goalDao.getGoalsByUser(currentUserIin ?: return@launch)
+                }
             }
         )
     }
@@ -270,7 +276,8 @@ fun AddGoalDialog(
 fun GoalDetailsDialog(
     goal: Goal,
     onDismiss: () -> Unit,
-    onUpdate: (Goal) -> Unit
+    onUpdate: (Goal) -> Unit,
+    onDelete: (Goal) -> Unit
 ) {
     var title by remember { mutableStateOf(goal.title) }
     var description by remember { mutableStateOf(goal.description) }
@@ -305,23 +312,32 @@ fun GoalDetailsDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    onUpdate(goal.copy(
-                        title = title,
-                        description = description,
-                        progress = progress
-                    ))
-                    onDismiss()
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Сохранить")
+                TextButton(
+                    onClick = {
+                        onDelete(goal)
+                        onDismiss()
+                    }
+                ) {
+                    Text("Удалить", color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(
+                    onClick = {
+                        onUpdate(goal.copy(
+                            title = title,
+                            description = description,
+                            progress = progress
+                        ))
+                        onDismiss()
+                    }
+                ) {
+                    Text("Сохранить")
+                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Закрыть")
-            }
-        }
+        dismissButton = {}
     )
 } 
